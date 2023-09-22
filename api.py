@@ -135,10 +135,16 @@ def _internal_sdm(with_tt=False, force_json=False):
                                   sdmmac=sdmmac_b,
                                   enc_file_data=enc_file_data_b)
     except InvalidMessage:
-        return "Invalid signature"
+        return jsonify({
+                "status": "NOK",
+                "message": "Invalid signature"
+            }) 
     except Exception as e:
         print(str(e))
-        return "Something went wrong"
+        return jsonify({
+                "status": "NOK",
+                "message": "Something went wrong"
+            })
 
     picc_data_tag = res['picc_data_tag']
     uid = res['uid']
