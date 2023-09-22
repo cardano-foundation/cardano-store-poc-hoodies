@@ -19,7 +19,6 @@ from config import (
     CTR_PARAM,
     ENC_FILE_DATA_PARAM,
     ENC_PICC_DATA_PARAM,
-    REQUIRE_LRP,
     SDMMAC_PARAM,
     MASTER_KEY,
     UID_PARAM,
@@ -136,13 +135,10 @@ def _internal_sdm(with_tt=False, force_json=False):
                                   sdmmac=sdmmac_b,
                                   enc_file_data=enc_file_data_b)
     except InvalidMessage:
-        raise BadRequest("Invalid message (most probably wrong signature).") from InvalidMessage
+        return "Invalid signature"
     except Exception as e:
         print(str(e))
-        raise BadRequest("Something went wrong") from InvalidMessage
-
-    if REQUIRE_LRP and res['encryption_mode'] != EncMode.LRP:
-        raise BadRequest("Invalid encryption mode, expected LRP.")
+        return "Something went wrong"
 
     picc_data_tag = res['picc_data_tag']
     uid = res['uid']
@@ -151,9 +147,7 @@ def _internal_sdm(with_tt=False, force_json=False):
     encryption_mode = res['encryption_mode'].name
 
     file_data_utf8 = ""
-    tt_status_api = ""
-    tt_status = ""
-    tt_color = ""
+
 
     if res['file_data']:
         if param_mode == ParamMode.BULK:
@@ -166,6 +160,7 @@ def _internal_sdm(with_tt=False, force_json=False):
 
 
     return jsonify({
+        "status": "OK",
         "uid": uid.hex().upper(),
         "file_data": file_data.hex() if file_data else None,
         "read_ctr": read_ctr_num,
