@@ -8,6 +8,12 @@ from flask import Flask, jsonify, render_template, request, make_response
 from flask_cors import CORS
 
 from werkzeug.exceptions import BadRequest
+import os
+from os.path import exists
+import mysql.connector
+from pycardano import *
+from blockfrost import BlockFrostApi, ApiError, ApiUrls,BlockFrostIPFS
+from dotenv import load_dotenv
 
 from config import (
     CTR_PARAM,
@@ -39,6 +45,15 @@ app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 CORS(app)
 
+load_dotenv()
+
+network = os.getenv('network')
+mysql_host = os.getenv('mysql_host')
+mysql_user = os.getenv('mysql_user')
+mysql_password = os.getenv('mysql_password')
+mysql_database = os.getenv('mysql_database')
+blockfrost_apikey = os.getenv('blockfrost_apikey')
+blockfrost_ipfs = os.getenv('blockfrost_ipfs')
 
 
 def parse_parameters():
@@ -84,29 +99,35 @@ def sdm_api_info():
         try:
             return _internal_sdm(with_tt=False, force_json=True)
         except BadRequest as err:
-            return jsonify({"error": str(err)})
+            return jsonify({
+                "status": "NOK",
+                "message": err
+            })
+        except Exception as err:
+            return jsonify({
+                "status": "NOK",
+                "message": err
+            })            
     else:
-        raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
+        return jsonify({
+                "status": "NOK",
+                "message": "Something went wrong"
+            }) 
 
 
 
 def _build_cors_preflight_response():
     response = make_response()
     response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add('Access-Control-Allow-Headers', "*")
-    response.headers.add('Access-Control-Allow-Methods', "*")
+    # response.headers.add('Access-Control-Allow-Headers', "*")
+    # response.headers.add('Access-Control-Allow-Methods', "*")
     return response
 
 
 # pylint:  disable=too-many-branches, too-many-statements, too-many-locals
 def _internal_sdm(with_tt=False, force_json=False):
-    """
-    SUN decrypting/validating endpoint.
-    """
-
-    print("trigger internal")
     param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b = parse_parameters()
-    print("trigger internal final")
+    
     try:
         res = decrypt_sun_message(param_mode=param_mode,
                                   sdm_meta_read_key=derive_undiversified_key(MASTER_KEY, 1),
@@ -116,6 +137,9 @@ def _internal_sdm(with_tt=False, force_json=False):
                                   enc_file_data=enc_file_data_b)
     except InvalidMessage:
         raise BadRequest("Invalid message (most probably wrong signature).") from InvalidMessage
+    except Exception as e:
+        print(str(e))
+        raise BadRequest("Something went wrong") from InvalidMessage
 
     if REQUIRE_LRP and res['encryption_mode'] != EncMode.LRP:
         raise BadRequest("Invalid encryption mode, expected LRP.")
@@ -140,8 +164,6 @@ def _internal_sdm(with_tt=False, force_json=False):
 
         file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
 
-    
-    print(file_data_utf8)
 
     return jsonify({
         "uid": uid.hex().upper(),
@@ -155,6 +177,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='OTA NFC Server')
     parser.add_argument('--host', type=str, nargs='?', help='address to listen on')
     parser.add_argument('--port', type=int, nargs='?', help='port to listen on')
+
+
+    print(network)
 
     args = parser.parse_args()
 
