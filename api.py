@@ -54,6 +54,16 @@ mysql_database = os.getenv('mysql_database')
 blockfrost_apikey = os.getenv('blockfrost_apikey')
 blockfrost_ipfs = os.getenv('blockfrost_ipfs')
 
+def connect_to_db():
+    global mydb 
+    mydb = mysql.connector.connect(
+        host=mysql_host,
+        user=mysql_user,
+        password=mysql_password,
+        database=mysql_database,
+        auth_plugin="mysql_native_password"
+    )
+
 
 def parse_parameters():
     
@@ -134,6 +144,47 @@ def _internal_sdm(with_tt=False, force_json=False):
                                   picc_enc_data=enc_picc_data_b,
                                   sdmmac=sdmmac_b,
                                   enc_file_data=enc_file_data_b)
+
+
+        connect_to_db()
+        mycursor = mydb.cursor(dictionary=True)
+
+        picc_data_tag = res['picc_data_tag']
+        uid = res['uid']
+        read_ctr_num = res['read_ctr']
+        file_data = res['file_data']
+        encryption_mode = res['encryption_mode'].name
+
+        file_data_utf8 = ""
+
+
+        if res['file_data']:
+            if param_mode == ParamMode.BULK:
+                file_data_len = file_data[2]
+                file_data_unpacked = file_data[3:3 + file_data_len]
+            else:
+                file_data_unpacked = file_data
+
+            file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
+
+        # try:
+            sql = "INSERT INTO scanned_keys (device_uid, counter) VALUES (%s, %s)"
+            values = (uid, read_ctr_num)
+            mycursor.execute(sql, values)
+            mydb.commit()
+
+
+        # except Exception as e:
+
+
+        return jsonify({
+            "status": "OK",
+            "uid": uid.hex().upper(),
+            "file_data": file_data.hex() if file_data else None,
+            "read_ctr": read_ctr_num,
+            "enc_mode": encryption_mode
+        })
+
     except InvalidMessage:
         return jsonify({
                 "status": "NOK",
@@ -146,32 +197,9 @@ def _internal_sdm(with_tt=False, force_json=False):
                 "message": "Something went wrong"
             })
 
-    picc_data_tag = res['picc_data_tag']
-    uid = res['uid']
-    read_ctr_num = res['read_ctr']
-    file_data = res['file_data']
-    encryption_mode = res['encryption_mode'].name
-
-    file_data_utf8 = ""
 
 
-    if res['file_data']:
-        if param_mode == ParamMode.BULK:
-            file_data_len = file_data[2]
-            file_data_unpacked = file_data[3:3 + file_data_len]
-        else:
-            file_data_unpacked = file_data
 
-        file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
-
-
-    return jsonify({
-        "status": "OK",
-        "uid": uid.hex().upper(),
-        "file_data": file_data.hex() if file_data else None,
-        "read_ctr": read_ctr_num,
-        "enc_mode": encryption_mode
-    })
 
 
 if __name__ == '__main__':
