@@ -169,7 +169,7 @@ def _internal_sdm(with_tt=False, force_json=False):
 
         # try:
             sql = "INSERT INTO scanned_keys (device_uid, counter) VALUES (%s, %s)"
-            values = (uid, read_ctr_num)
+            values = (uid.hex().upper(), read_ctr_num)
             mycursor.execute(sql, values)
             mydb.commit()
 
