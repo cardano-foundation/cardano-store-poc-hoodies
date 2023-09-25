@@ -167,14 +167,19 @@ def _internal_sdm(with_tt=False, force_json=False):
 
             file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
 
-        # try:
+        try:
             sql = "INSERT INTO scanned_keys (device_uid, counter) VALUES (%s, %s)"
             values = (uid.hex().upper(), read_ctr_num)
             mycursor.execute(sql, values)
             mydb.commit()
 
 
-        # except Exception as e:
+        except mysql.connector.errors.IntegrityError:
+            return jsonify({
+                "status": "NOK",
+                "message": "Key already scanned"
+            })
+
 
 
         return jsonify({
