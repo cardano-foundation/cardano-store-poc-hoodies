@@ -53,6 +53,21 @@ mysql_password = os.getenv('mysql_password')
 mysql_database = os.getenv('mysql_database')
 blockfrost_apikey = os.getenv('blockfrost_apikey')
 blockfrost_ipfs = os.getenv('blockfrost_ipfs')
+policy_id_hex = "65da4fc679cb48187f1e72387526bb899c4b9fa8c746ce070f85d58f"
+base_name = "HOODIE"
+vkey_prefix = "a4010103272006215820"
+placeholder_paymentkey = '{"type": "PaymentSigningKeyShelley_ed25519", "description": "PaymentSigningKeyShelley_ed25519", "cborHex": "5820PLACEHOLDER"}'
+
+if network=="testnet":
+    base_url = ApiUrls.preprod.value
+    cardano_network = Network.TESTNET
+else:
+    base_url = ApiUrls.mainnet.value
+    cardano_network = Network.MAINNET
+
+api = BlockFrostApi(project_id=blockfrost_apikey, base_url=base_url)        
+cardano = BlockFrostChainContext(project_id=blockfrost_apikey, base_url=base_url)
+
 
 def connect_to_db():
     global mydb 
@@ -74,6 +89,7 @@ def parse_parameters():
     enc_picc_data = posted_data[ENC_PICC_DATA_PARAM]
     enc_file_data = posted_data[ENC_FILE_DATA_PARAM]
     sdmmac = posted_data[SDMMAC_PARAM]
+    asset_name = posted_data['asset_name']
 
 
 
@@ -94,7 +110,7 @@ def parse_parameters():
         raise BadRequest("Failed to decode parameters.") from None
 
 
-    return param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b
+    return param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b, asset_name
 
 
 
@@ -127,15 +143,18 @@ def sdm_api_info():
 
 def _build_cors_preflight_response():
     response = make_response()
-    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Origin", "https://store.cardano.org")
     response.headers.add('Access-Control-Allow-Headers', "*")
     response.headers.add('Access-Control-Allow-Methods', "*")
     return response
 
+def joinall(value):
+    s = ''.join(value)
+    return s
 
 # pylint:  disable=too-many-branches, too-many-statements, too-many-locals
 def _internal_sdm(with_tt=False, force_json=False):
-    param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b = parse_parameters()
+    param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b, asset_name = parse_parameters()
     
     try:
         res = decrypt_sun_message(param_mode=param_mode,
@@ -168,10 +187,11 @@ def _internal_sdm(with_tt=False, force_json=False):
             file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
 
         try:
-            sql = "INSERT INTO scanned_keys (device_uid, counter) VALUES (%s, %s)"
-            values = (uid.hex().upper(), read_ctr_num)
-            mycursor.execute(sql, values)
-            mydb.commit()
+            print("bypassing insert into DB")
+            # sql = "INSERT INTO scanned_keys (device_uid, counter) VALUES (%s, %s)"
+            # values = (uid.hex().upper(), read_ctr_num)
+            # mycursor.execute(sql, values)
+            # mydb.commit()
 
 
         except mysql.connector.errors.IntegrityError:
@@ -181,14 +201,50 @@ def _internal_sdm(with_tt=False, force_json=False):
             })
 
 
+        file_data_utf8 = file_data_utf8.lower()
+        payment_key = placeholder_paymentkey.replace('PLACEHOLDER', file_data_utf8)
+        payment_signing_key = PaymentSigningKey.from_json(payment_key)
+        payment_verification_key = PaymentVerificationKey.from_signing_key(payment_signing_key)
+        payment_verification_key = str(payment_verification_key).split('"5820')[1].replace('"}','')
 
-        return jsonify({
-            "status": "OK",
-            "uid": uid.hex().upper(),
-            "file_data": file_data.hex() if file_data else None,
-            "read_ctr": read_ctr_num,
-            "enc_mode": encryption_mode
-        })
+        asset_id = int(asset_name.replace('asset',''))
+        asset_name = f"{base_name}{asset_id:04d}"
+        asset_name_hex = asset_name.encode("utf-8").hex()
+
+        subject = f"{policy_id_hex}{asset_name_hex}"
+
+
+        vkey = f"{vkey_prefix}{payment_verification_key}"
+        asset_data = api.asset(asset=subject)
+
+        signature = joinall(asset_data.onchain_metadata.Signature)
+        signed_message = {
+            "signature": signature,
+            "key": vkey,
+        }
+
+        print(asset_data.onchain_metadata)
+
+        result = cip8.verify(signed_message=signed_message, attach_cose_key=True)
+
+        if result["verified"]:
+            return jsonify({
+                "status": "OK",
+                "message": "Verification succesful",
+                "asset": {
+                    "name": asset_data.onchain_metadata.name,
+                    "image": asset_data.onchain_metadata.image,
+                }
+            })
+
+        else:
+            return jsonify({
+                "status": "NOK",
+                "message": "Verification failed"
+            })
+
+
+
 
     except InvalidMessage:
         return jsonify({
