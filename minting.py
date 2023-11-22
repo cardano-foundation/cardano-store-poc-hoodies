@@ -115,6 +115,7 @@ assets = [
 
 
 
+
 builder = TransactionBuilder(cardano)
 builder.add_input_address(main_address)
 
@@ -149,16 +150,50 @@ for asset in assets:
 
 
 
-    files = {'file': open(asset_image,'rb')}
-    # print(f"Uploading {asset_image} to IPFS")
-    res = requests.post("https://ipfs.blockfrost.io/api/v0/ipfs/add", headers= custom_header, files=files)
-    hashed = res.json()['ipfs_hash']
+    # files = {'file': open(asset_image,'rb')}
+    # # print(f"Uploading {asset_image} to IPFS")
+    # res = requests.post("https://ipfs.blockfrost.io/api/v0/ipfs/add", headers= custom_header, files=files)
+    # hashed = res.json()['ipfs_hash']
 
+    video_hash = "QmaUC5geNjiNfuqDFHvqnwhJyZd1mQjHr36H1Umff91nGx"
+    thumbnail_hash = "QmbN7GjT8wgUYbQS7djN8Lqt19EjCa8VQtHTc5auBvvF2v"
+
+    description = "Cardano Foundation Merchandise"
+    product = "Hoodie"
+    version = "Pioneer"
+    color = "Black"
+    detailed_product_description = "Cardano Foundation Proof of Concept Hoodie - NFC Enabled"
+    certificate_authenticity = split_into_64chars("This NFT represents a Certificate of Authenticity for the Cardano Foundation Proof of Concept Hoodie by linking the physical product to this digital asset on the Cardano blockchain leveraging an NFC chip embedded inside the hoodie.")
+    disclaimer = split_into_64chars("This item is designated as a \"Proof of Concept Product\" (POC Product). By purchasing POC Products, you acknowledge and understand that: POC Products or parts thereof may not function as intended. The performance of POC Products may vary, or they may not work at all. POC Products are sold \"as is,\" and no warranties, either expressed or implied, are provided for these items. The Cardano Foundation (referred to as \"we\" or \"us\") accepts no liability for any issues or limitations related to the functionality of POC Products.")
+    limited_quantity = "1 of 250"
+    production_country = "India"
+    sustainability_certificate = "GOTS Certification licence number 015389"
+    apparel_technology = "Cardano Foundation"
+    about_authenticated_products = "https://store.cardano.org/pages/authenticated-products"
+
+
+    files_array = [{
+            "src": f"ipfs://{video_hash}",
+            "mediaType": "video/mp4"
+        }]
 
     metadata[721][policy_id_hex][asset_name] = {
                             "name": asset_name,
-                            "image": f"ipfs://{hashed}",
-                            "mediaType": "image/jpg",                                
+                            "image": f"ipfs://{thumbnail_hash}",
+                            "mediaType": "image/png",
+                            "description": description,
+                            "product": product,
+                            "version": version,
+                            "color": color,
+                            "detailed product description": detailed_product_description,
+                            "certificate authenticity": certificate_authenticity,
+                            "disclaimer": disclaimer, 
+                            "limited quantity": limited_quantity,
+                            "production country": production_country,
+                            "sustainability certificate": sustainability_certificate,
+                            "apparel technology": apparel_technology,
+                            "about authenticated products": about_authenticated_products,
+                            "files": files_array
                         }
 
     payment_signing_key = placeholder_paymentkey.replace('PLACEHOLDER', asset_private_key)

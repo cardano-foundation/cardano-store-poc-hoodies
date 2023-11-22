@@ -4,7 +4,7 @@ import argparse
 import binascii
 import io
 
-from flask import Flask, jsonify, render_template, request, make_response
+from flask import Flask, jsonify, render_template, request, make_response, send_from_directory
 from flask_cors import CORS
 
 from werkzeug.exceptions import BadRequest
@@ -15,30 +15,10 @@ from pycardano import *
 from blockfrost import BlockFrostApi, ApiError, ApiUrls,BlockFrostIPFS
 from dotenv import load_dotenv
 
-from config import (
-    CTR_PARAM,
-    ENC_FILE_DATA_PARAM,
-    ENC_PICC_DATA_PARAM,
-    SDMMAC_PARAM,
-    MASTER_KEY,
-    UID_PARAM,
-    DERIVE_MODE,
-)
+from derive import derive_tag_key, derive_undiversified_key
+from config import SDMMAC_PARAM, ENC_FILE_DATA_PARAM, ENC_PICC_DATA_PARAM, SDM_MASTER_KEY, UID_PARAM, CTR_PARAM, REQUIRE_LRP
+from libsdm import decrypt_sun_message, validate_plain_sun, InvalidMessage, EncMode
 
-if DERIVE_MODE == "legacy":
-    from libsdm.legacy_derive import derive_tag_key, derive_undiversified_key
-elif DERIVE_MODE == "standard":
-    from libsdm.derive import derive_tag_key, derive_undiversified_key
-else:
-    raise RuntimeError("Invalid DERIVE_MODE.")
-
-from libsdm.sdm import (
-    EncMode,
-    InvalidMessage,
-    ParamMode,
-    decrypt_sun_message,
-    validate_plain_sun,
-)
 
 app = Flask(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -83,8 +63,10 @@ def connect_to_db():
 def parse_parameters():
     
 
-    param_mode = ParamMode.SEPARATED
+    param_mode = "ParamMode.SEPARATED"
     posted_data = request.get_json()
+
+    print(posted_data)
 
     enc_picc_data = posted_data[ENC_PICC_DATA_PARAM]
     enc_file_data = posted_data[ENC_FILE_DATA_PARAM]
@@ -92,6 +74,7 @@ def parse_parameters():
     asset_name = posted_data['asset_name']
 
 
+    # breakpoint()
 
     if not enc_picc_data:
         raise BadRequest(f"Parameter {ENC_PICC_DATA_PARAM} is required")
@@ -112,6 +95,10 @@ def parse_parameters():
 
     return param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b, asset_name
 
+
+@app.route('/video/hoodie')
+def show_hoodie():
+    return send_from_directory('assets', 'rotating_hoodie.mp4')
 
 
 @app.route('/api/tag',methods = ['POST', 'GET', 'OPTIONS'])
@@ -156,10 +143,11 @@ def joinall(value):
 def _internal_sdm(with_tt=False, force_json=False):
     param_mode, enc_picc_data_b, enc_file_data_b, sdmmac_b, asset_name = parse_parameters()
     
+
     try:
-        res = decrypt_sun_message(param_mode=param_mode,
-                                  sdm_meta_read_key=derive_undiversified_key(MASTER_KEY, 1),
-                                  sdm_file_read_key=lambda uid: derive_tag_key(MASTER_KEY, uid, 2),
+        res = decrypt_sun_message(
+                                  sdm_meta_read_key=derive_undiversified_key(SDM_MASTER_KEY, 1),
+                                  sdm_file_read_key=lambda uid: derive_tag_key(SDM_MASTER_KEY, uid, 2),
                                   picc_enc_data=enc_picc_data_b,
                                   sdmmac=sdmmac_b,
                                   enc_file_data=enc_file_data_b)
@@ -176,15 +164,14 @@ def _internal_sdm(with_tt=False, force_json=False):
 
         file_data_utf8 = ""
 
+        
 
         if res['file_data']:
-            if param_mode == ParamMode.BULK:
-                file_data_len = file_data[2]
-                file_data_unpacked = file_data[3:3 + file_data_len]
-            else:
-                file_data_unpacked = file_data
+            file_data_unpacked = file_data
 
             file_data_utf8 = file_data_unpacked.decode('utf-8', 'ignore')
+
+        # breakpoint()
 
         try:
             print("bypassing insert into DB")
@@ -223,7 +210,7 @@ def _internal_sdm(with_tt=False, force_json=False):
             "key": vkey,
         }
 
-        print(asset_data.onchain_metadata)
+        # print(asset_data)
 
         result = cip8.verify(signed_message=signed_message, attach_cose_key=True)
 
@@ -233,7 +220,18 @@ def _internal_sdm(with_tt=False, force_json=False):
                 "message": "Verification succesful",
                 "asset": {
                     "name": asset_data.onchain_metadata.name,
-                    "image": asset_data.onchain_metadata.image,
+                    "image": asset_data.onchain_metadata.files[0].src,
+                    "color": asset_data.onchain_metadata.color,
+                    "product": asset_data.onchain_metadata.product,
+                    "description": asset_data.onchain_metadata.description,
+                    "disclaimer": ''.join(asset_data.onchain_metadata.disclaimer),
+                    "detailed_product_description" : "Cardano Foundation Proof of Concept Hoodie - NFC Enabled",
+                    "certificate_authenticity" : "This NFT represents a Certificate of Authenticity for the Cardano Foundation Proof of Concept Hoodie by linking the physical product to this digital asset on the Cardano blockchain leveraging an NFC chip embedded inside the hoodie.",                    
+                    "limited_quantity" : "1 of 250",
+                    "production_country" : "India",
+                    "sustainability_certificate" : "GOTS Certification licence number 015389",
+                    "apparel_technology" : "Cardano Foundation",
+                    "about_authenticated_products" : "https://store.cardano.org/pages/authenticated-products"
                 }
             })
 
@@ -246,7 +244,8 @@ def _internal_sdm(with_tt=False, force_json=False):
 
 
 
-    except InvalidMessage:
+    except InvalidMessage as e:
+        print(str(e))
         return jsonify({
                 "status": "NOK",
                 "message": "Invalid signature"

@@ -13,7 +13,7 @@ from Crypto.Cipher import AES
 
 import config
 
-from libsdm.lrp import LRP
+from lrp import LRP
 
 
 class EncMode(Enum):
