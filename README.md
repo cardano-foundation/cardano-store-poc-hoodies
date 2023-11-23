@@ -41,7 +41,7 @@ Furthermore, a special process for key generation/derivation must be followed.
 
 ## Key Generation / Derivation
 
-This code below can be used to generate the keys. The tag uid is needed to run the script.
+### Get the UID of the NFC chip
 
 - Connect the reader to your PC and open the TagXplorer
 - Click on "Connect Reader"
@@ -50,24 +50,20 @@ This code below can be used to generate the keys. The tag uid is needed to run t
 - Go to NTAG Operations and click on "Get version"
 - The `UID` should be now displayed on the right side in the list below
 
-```python
-import binascii
-from derive import derive_tag_key, derive_undiversified_key
+### Generate the keys
 
-SDM_MASTER_KEY = binascii.unhexlify("00000000000000000000000000000001")
-TAG_UID = binascii.unhexlify("... put your tag's UID here...")
-
-master_key = derive_tag_key(SDM_MASTER_KEY, TAG_UID, 0)
-key_1 = derive_undiversified_key(SDM_MASTER_KEY, 1)
-key_2 = derive_tag_key(SDM_MASTER_KEY, TAG_UID, 2)
-key_3 = derive_tag_key(SDM_MASTER_KEY, TAG_UID, 3)
-key_4 = derive_tag_key(SDM_MASTER_KEY, TAG_UID, 4)
-
-print('key 0', master_key.hex())
-print('key 1', key_1.hex())
-print('key 2', key_2.hex())
-print('key 3', key_3.hex())
-print('key 4', key_4.hex())
-```
+`python derive_keys.py 14A119420C1091`zsh
 
 ## Instructions
+
+- Open the TagXplorer
+- Click on "Connect Reader"
+- Put an NFC chip on the reader
+- Click "Connect Tag" in the left side menu
+- Go to "NTAG Operations" and click on "Mirroring Features"
+- Select "https" as protocol and AES as authentication mode
+- Check "Add Tag UID", "Add Iteration Counter" and "Encrypted File Data"
+- URI data should be `store.cardano.org/pages/nfc/asset<ASSET_ID>?picc_data=00000000000000000000000000000000&enc=<PAYMENT_KEY>0000000000000000000000000000000000000000000000000000000000000000&cmac=0000000000000000`
+- An example ASSET_ID and the PAYMENT_KEY can be found in [minting.py](./minting.py)
+- Click on "Write To Tag"
+
