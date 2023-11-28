@@ -1,3 +1,6 @@
 .env
 keys/*
 !keys/.gitkeep 
+*.csv
+automation/*
+master_key.txt

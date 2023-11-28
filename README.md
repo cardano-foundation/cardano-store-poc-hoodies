@@ -39,7 +39,7 @@ See:
 These issues require running the verification part of this project based on [an old smd-backend version from 2022](https://github.com/icedevml/sdm-backend/tree/a89a8381a7b680abff721f006085ec4d15f8c543). 
 Furthermore, a special process for key generation/derivation must be followed.
 
-## Key Generation / Derivation
+## Instructions
 
 ### Get the UID of the NFC chip
 
@@ -50,11 +50,11 @@ Furthermore, a special process for key generation/derivation must be followed.
 - Go to NTAG Operations and click on "Get version"
 - The `UID` should be now displayed on the right side in the list below
 
-### Generate the keys
+### Generate the keys, url and offets
 
-`python derive_keys.py 14A119420C1091`zsh
+`python prepare_flashing.py <UID>`zsh
 
-## Instructions
+### Write the mirroring data to the NFC chip
 
 - Open the TagXplorer
 - Click on "Connect Reader"
@@ -63,7 +63,40 @@ Furthermore, a special process for key generation/derivation must be followed.
 - Go to "NTAG Operations" and click on "Mirroring Features"
 - Select "https" as protocol and AES as authentication mode
 - Check "Add Tag UID", "Add Iteration Counter" and "Encrypted File Data"
-- URI data should be `store.cardano.org/pages/nfc/asset<ASSET_ID>?picc_data=00000000000000000000000000000000&enc=<PAYMENT_KEY>0000000000000000000000000000000000000000000000000000000000000000&cmac=0000000000000000`
-- An example ASSET_ID and the PAYMENT_KEY can be found in [minting.py](./minting.py)
+- Copy the url from the `prepare_flashing` script output to the URI data  e.g. `store.cardano.org/pages/nfc/HOODIE<HOODIE_ID>?picc_data=00000000000000000000000000000000&enc=<PAYMENT_KEY>0000000000000000000000000000000000000000000000000000000000000000&cmac=0000000000000000`
 - Click on "Write To Tag"
 
+### Encrypt the file data
+
+- Go to "NTAG 424 DNA Tag Temper"
+- Click on "Security Manegement"
+- Click the button "Authenticate First"
+- Now click in the left side menu on the button "Get / Change File Settings"
+- Change the communication type to "Enciphered"
+- Check "SMD and Mirroring"
+- In the "SMD Access Rights" section, Change the keys to 1, 2 and 1 in the 3 dropdown fields
+- Now you can also check "SMD Read Counter", "SMD Encrypted File Mirroring" and "UID (for mirroring)"
+- SMD Encrypted File Length is 128
+- Change to offsets to the output of the `prepare_flashing` script
+- Click on "Change File Settings"
+
+### Change the keys
+
+- Click on "Security Manegement"
+- Click the button "Authenticate First"
+- Click on "Change Keys"
+- Key 00 should be selected by default
+- Change the key to the output of the `prepare_flashing` script
+- Change the key version to "01"
+- Click on "Change Key"
+- Go back to the first panel
+- Change the authentication key 00 to the new one
+- Click on "Authenticate First"
+- Repeat the steps for key 01 and 02
+- Key 00 will remain the same as it is used for authentication
+
+### Verify the NFC chip
+- Click on the very left side menu on "NDEF Operations"
+- Click on "Read NDEF"
+- Copy the url and paste it into your browser
+- The browser should display the hoodie page with the correct hoodie id and a green verified checkmark
