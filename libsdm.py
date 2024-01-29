@@ -6,7 +6,7 @@ This code was implemented based on the examples provided in:
 import io
 import struct
 from enum import Enum
-from typing import Optional, Tuple, Callable
+from typing import Optional, Callable
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES
@@ -48,7 +48,8 @@ def calculate_sdmmac(sdm_file_read_key: bytes,
         if not config.SDMMAC_PARAM:
             sdmmac_param_text = ""
 
-        input_buf.write(enc_file_data.hex().upper().encode('ascii') + sdmmac_param_text.encode('ascii'))
+        input_buf.write(enc_file_data.hex().upper().encode(
+            'ascii') + sdmmac_param_text.encode('ascii'))
 
     if mode == EncMode.AES:
         sv2stream = io.BytesIO()
@@ -137,7 +138,8 @@ def decrypt_file_data(sdm_file_read_key: bytes,
         lrp_master = LRP(sdm_file_read_key, 0)
         master_key = lrp_master.cmac(sv)
 
-        lrp_sess_encing = LRP(master_key, 1, read_ctr + b"\x00\x00\x00", pad=False)
+        lrp_sess_encing = LRP(master_key, 1, read_ctr +
+                              b"\x00\x00\x00", pad=False)
         return lrp_sess_encing.decrypt(enc_file_data)
     else:
         raise InvalidMessage("Invalid encryption mode")
@@ -154,7 +156,8 @@ def validate_plain_sun(uid: bytes, read_ctr: bytes, sdmmac: bytes, sdm_file_read
     datastream.write(uid)
     datastream.write(read_ctr_ba)
 
-    proper_sdmmac = calculate_sdmmac(sdm_file_read_key, datastream.getvalue(), mode=mode)
+    proper_sdmmac = calculate_sdmmac(
+        sdm_file_read_key, datastream.getvalue(), mode=mode)
 
     if sdmmac != proper_sdmmac:
         raise InvalidMessage("Message is not properly signed - invalid MAC")
@@ -222,7 +225,8 @@ def decrypt_sun_message(sdm_meta_read_key: bytes,
     # dont read the buffer any further if we don't recognize it
     if uid_length not in [0x07]:
         # fake SDMMAC calculation to avoid potential timing attacks
-        calculate_sdmmac(sdm_file_read_key(b"\x00" * 7), b"\x00" * 10, enc_file_data, mode=mode)
+        calculate_sdmmac(sdm_file_read_key(b"\x00" * 7),
+                         b"\x00" * 10, enc_file_data, mode=mode)
         raise InvalidMessage("Unsupported UID length")
 
     if uid_mirroring_en:
@@ -241,9 +245,11 @@ def decrypt_sun_message(sdm_meta_read_key: bytes,
 
     if enc_file_data:
         if not read_ctr:
-            raise InvalidMessage("SDMReadCtr is required to decipher SDMENCFileData.")
+            raise InvalidMessage(
+                "SDMReadCtr is required to decipher SDMENCFileData.")
 
-        file_data = decrypt_file_data(file_key, datastream.getvalue(), read_ctr, enc_file_data, mode=mode)
+        file_data = decrypt_file_data(
+            file_key, datastream.getvalue(), read_ctr, enc_file_data, mode=mode)
 
     return {
         "picc_data_tag": picc_data_tag,

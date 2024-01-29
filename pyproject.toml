@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "cf-merch-store"
+version = "0.1.0"
+description = "Proof-of-concept (POC) hoodie project for https://store.cardano.org/. Open-sourced for full transparency and community collaboration."
+readme = "README.md"
+authors = ["Cardano Foundation <https://cardanofoundation.org>"]
+packages = [{include = "cf-merch-store"}]
+
+[tool.poetry.dependencies]
+python = "^3.9.0"
+flask = "^3.0.1"
+flask-cors = "^4.0.0"
+mysql-connector-python = "^8.3.0"
+pycardano = "^0.10.0"
+python-dotenv = "^1.0.1"
+setuptools = "^69.0.3"
+pycryptodome = "^3.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

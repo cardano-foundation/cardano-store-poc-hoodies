@@ -153,7 +153,8 @@ class LRP:
             while ptstream.getbuffer().nbytes % AES.block_size != 0:
                 ptstream.write(b"\x00")
         elif ptstream.getbuffer().nbytes % AES.block_size != 0:
-            raise RuntimeError("Parameter pt must have length multiple of AES block size.")
+            raise RuntimeError(
+                "Parameter pt must have length multiple of AES block size.")
         elif ptstream.getbuffer().nbytes == 0:
             raise RuntimeError("Zero length pt not supported.")
 

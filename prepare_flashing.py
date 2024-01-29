@@ -3,6 +3,14 @@ import sys
 from derive import derive_tag_key, derive_undiversified_key
 import argparse
 from os.path import exists
+import subprocess
+
+
+def write_to_clipboard(output):
+    process = subprocess.Popen(
+        'pbcopy', env={'LANG': 'en_US.UTF-8'}, stdin=subprocess.PIPE)
+    process.communicate(output.encode('utf-8'))
+
 
 def derive_key_for_uid(uid, master_key_hex):
     SDM_MASTER_KEY = binascii.unhexlify(master_key_hex)
@@ -33,30 +41,35 @@ def prepare_asset_urls(master_key, key_1, key_2):
             actual_offset = len('https://' + url + '?picc_data=') - 1
             url = url + url_path_params.replace('<PRIVAT_KEY>', private_key)
             print(url)
-            
+            write_to_clipboard(url)
+
             PICC_DATA_OFFSET = 54
             SMD_ENCRYPTED_FILE_OFFSET = 91
             SDM_MAC_OFFSET = 225
             SMD_MAC_INPUT_OFFSET = 91
-            
+
             relative_offset = actual_offset - PICC_DATA_OFFSET
 
             print('SMD_ENCRYPTED_FILE_LENGTH', 128)
             print('SMD_MAC_INPUT_OFFSET', SMD_MAC_INPUT_OFFSET + relative_offset)
             print('SDM_MAC_OFFSET', SDM_MAC_OFFSET + relative_offset)
-            print('SMD_ENCRYPTED_FILE_OFFSET', SMD_ENCRYPTED_FILE_OFFSET + relative_offset)
+            print('SMD_ENCRYPTED_FILE_OFFSET',
+                  SMD_ENCRYPTED_FILE_OFFSET + relative_offset)
             print('PICC_DATA_OFFSET', PICC_DATA_OFFSET + relative_offset)
 
             with open('done.csv', 'a') as file:
                 file.write('\n' + line)
-                file.write(master_key.hex() + '|' + key_1.hex() + '|' + key_2.hex())
+                file.write(master_key.hex() + '|' +
+                           key_1.hex() + '|' + key_2.hex())
 
             break
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("derive_keys.py")
-    parser.add_argument("uid", help="The NFC uid. Example: python derive_keys.py 14A119420C1091", type=str)
-    
+    parser.add_argument(
+        "uid", help="The NFC uid. Example: python derive_keys.py 14A119420C1091", type=str)
+
     if not exists('master_key.txt'):
         print('Please create a master_key.txt file with the master key in it.')
         sys.exit(1)
@@ -72,7 +85,7 @@ if __name__ == '__main__':
 
     master_key, key_1, key_2 = derive_key_for_uid(args.uid, master_key)
     prepare_asset_urls(master_key, key_1, key_2)
-    
+
     print('key 0', master_key.hex())
     print('key 1', key_1.hex())
     print('key 2', key_2.hex())

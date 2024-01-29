@@ -1,5 +1,28 @@
 # cf-merchstore-api
 
+Proof-of-concept (POC) hoodie project for https://store.cardano.org/. Open-sourced for full transparency and community collaboration.
+
+## Getting started
+
+### Prerequisites
+
+- Python ^3.11
+- Poetry ^1.5.1
+
+### Installation
+
+```zsh
+git clone https://github.com/cardano-foundation/cf-merch-store.git
+cd cf-merch-store
+poetry install
+```
+
+### Usage
+
+```zsh
+poetry run python api.py
+```
+
 ## Hardware
 
 An NFC reader/writer is required to write information on the chips. [This reader/writer](https://www.shopnfc.com/en/nfc-readers-writers/212-utrust-3700-f-nfc-writer.html) works well with the used NTAG 424 DNA chips. The chips can be [ordered here](https://www.nfc-tag-shop.de/NFC-Sticker-PET-25-mm-NTAG424-DNA-416-Byte-weiss/68984).
