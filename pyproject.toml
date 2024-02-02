@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "cf-merch-store"
+name = "cardano-store-poc-hoodies"
 version = "0.1.0"
 description = "Proof-of-concept (POC) hoodie project for https://store.cardano.org/. Open-sourced for full transparency and community collaboration."
 readme = "README.md"
 authors = ["Cardano Foundation <https://cardanofoundation.org>"]
-packages = [{include = "cf-merch-store"}]
+packages = [{include = "cardano-store-poc-hoodies"}]
 
 [tool.poetry.dependencies]
 python = "^3.9.0"
