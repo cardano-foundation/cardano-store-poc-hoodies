@@ -13,7 +13,7 @@ Proof-of-concept (POC) hoodie project for https://store.cardano.org/. Open-sourc
 
 ```zsh
 git clone https://github.com/cardano-foundation/cardano-store-poc-hoodies.git
-cd cf-merch-store
+cd cardano-store-poc-hoodies
 poetry install
 ```
 
