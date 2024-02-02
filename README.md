@@ -12,7 +12,7 @@ Proof-of-concept (POC) hoodie project for https://store.cardano.org/. Open-sourc
 ### Installation
 
 ```zsh
-git clone https://github.com/cardano-foundation/cf-merch-store.git
+git clone https://github.com/cardano-foundation/cardano-store-poc-hoodies.git
 cd cf-merch-store
 poetry install
 ```
@@ -41,7 +41,7 @@ An NFC reader/writer is required to write information on the chips. [This reader
 - Extract it to, for example, `~/Software/javafx-sdk-21.0.1/` and add the following lines to your .zshrc / .bashrc file:
 
 ```zsh
-export JAVAFX_PATH="/Users/fabianbormann/Software/javafx-sdk-21.0.1/lib"
+export JAVAFX_PATH="~/Software/javafx-sdk-21.0.1/lib"
 export PATH=$PATH:JAVAFX_PAT
 ```
 
